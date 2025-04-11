@@ -26,9 +26,9 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const User = mongoose.modelNames("User", userSchema);
+const User = mongoose.model("User", userSchema);
 
 export default User;
 
-// User.create(docs:{})
+//  User.create(docs:{})
 // { name: "John Doe", email:"johnny@email.com", password:"password" }

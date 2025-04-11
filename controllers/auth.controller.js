@@ -12,6 +12,16 @@ export const signUp = async (req, res, next) => {
   try {
     // Logic to create a new user
     const { name, email, password } = req.body;
+    console.log("Request Body:", req.body);
+
+    // 🛡 Input validation
+    if (!name || !email || !password) {
+      const error = new Error(
+        "All fields (name, email, password) are required"
+      );
+      error.statusCode = 400;
+      throw error;
+    }
 
     // check if a user already exists
     const existingUser = await User.findOne({ email });
