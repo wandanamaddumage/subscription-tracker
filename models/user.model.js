@@ -30,5 +30,5 @@ const User = mongoose.modelNames("User", userSchema);
 
 export default User;
 
-// User.create(docs:{})
+//  User.create(docs:{})
 // { name: "John Doe", email:"johnny@email.com", password:"password" }
