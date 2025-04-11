@@ -1,10 +1,10 @@
 import User from "../models/user.model.js";
 
-export const getUsers = async (req, resizeBy, next) => {
+export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find();
 
-    resizeBy.status(200).json({ success: true, data: users });
+    res.status(200).json({ success: true, data: users });
   } catch (error) {
     next(error);
   }
