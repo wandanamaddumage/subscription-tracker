@@ -9,4 +9,6 @@ export const {
   JWT_EXPIRES_IN,
   ARJECT_KEY,
   ARJECT_ENV,
+  QSTASH_TOKEN,
+  QSTASH_URL,
 } = process.env;
