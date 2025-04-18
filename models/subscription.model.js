@@ -56,7 +56,7 @@ const subscriptionSchema = new mongoose.Schema(
     },
     renewalDate: {
       type: Date,
-      required: true,
+      required: false,
       validate: {
         validator: function (value) {
           return value > this.startDate;
@@ -84,10 +84,19 @@ subscriptionSchema.pre("save", function (next) {
       yearly: 365,
     };
 
-    this.renewalDate = new Date(this.startDate);
-    this.renewalDate.setDate(
-      this.renewalDate.getDate() + renewalPeriods[this.frequency]
-    );
+    if (this.startDate && this.frequency) {
+      this.renewalDate = new Date(this.startDate);
+      this.renewalDate.setDate(
+        this.renewalDate.getDate() + renewalPeriods[this.frequency]
+      );
+      console.log("Auto-calculated renewalDate:", this.renewalDate); // Log calculated renewalDate
+    } else {
+      return next(
+        new Error(
+          "Start date and frequency are required for auto-calculating renewalDate"
+        )
+      );
+    }
   }
 
   // Auto-update the status if renewal date has passed
