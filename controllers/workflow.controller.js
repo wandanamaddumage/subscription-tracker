@@ -13,7 +13,7 @@ export const sendReminders = serve(async (context) => {
 
   if (!subscription || subscription.status !== "active") return;
 
-  const renewalDate = new Date(subscription.renewalDate);
+  //   const renewalDate = new Date(subscription.renewalDate);
 
   const renewalDate = dayjs(subscription.renewalDate);
 
@@ -23,22 +23,36 @@ export const sendReminders = serve(async (context) => {
     );
   }
 
-  for (const dayBefore of REMINDERS) {
-    const reminderDate = reniwalDate.subtract(daysBefore, "day");
+  for (const daysBefore of REMINDERS) {
+    const reminderDate = renewalDate.subtract(daysBefore, "day");
     // renewal date = 22 feb, reminder date = 15 feb, 17, 20, 21
     if (reminderDate.isAfter(dayjs())) {
       // Schedula reminder
+      await sleepUntilReminder(
+        context,
+        `Reminder ${daysBefore} days before`,
+        reminderDate
+      );
     }
-  }
 
-  const sleepUntilReminder = async (context, MongoErrorLabel, date) => {
-    console.log(`Sleeping until ${label} reminder at ${date}`);
-    await context.sleepUntil(label, date.toDate());
-  };
+    await triggerReminder(context, `Reminder ${daysBefore} days before`);
+  }
 });
 
 const fetchSubscription = async (context, subscriptionId) => {
   return await context.run("get subscription", () => {
     return Subscription.findById(subscriptionId).populate("user", "name email");
+  });
+};
+
+const sleepUntilReminder = async (context, label, date) => {
+  console.log(`Sleeping until ${label} reminder at ${date}`);
+  await context.sleepUntil(label, date.toDate());
+};
+
+const triggerReminder = async (context, label) => {
+  return await context.run(label, () => {
+    console.log(`Triggering ${label} reminder`);
+    // Send email, SMS, push notification ...
   });
 };
