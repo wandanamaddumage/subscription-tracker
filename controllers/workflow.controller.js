@@ -1,46 +1,56 @@
 import dayjs from "dayjs";
-import { createRequire } from "module";
 import Subscription from "../models/subscription.model.js";
-
-const require = createRequire(import.meta.url);
-const { serve } = require("@upstash/workflow/epress");
 
 const REMINDERS = [7, 5, 2, 1];
 
-export const sendReminders = serve(async (context) => {
-  const { subscriptionId } = context.requestPayload;
-  const subscription = await fetchSubscription(context, subscriptionId);
-
-  if (!subscription || subscription.status !== "active") return;
-
-  //   const renewalDate = new Date(subscription.renewalDate);
-
-  const renewalDate = dayjs(subscription.renewalDate);
-
-  if (renewalDate.isBefore(dayjs())) {
-    console.log(
-      `Renewal date has passed for subscription ${subscriptionId}. Stopping workflow.`
+export const sendReminders = async (req, res) => {
+  try {
+    const { subscriptionId } = req.body;
+    const subscription = await Subscription.findById(subscriptionId).populate(
+      "user",
+      "name email"
     );
-  }
 
-  for (const daysBefore of REMINDERS) {
-    const reminderDate = renewalDate.subtract(daysBefore, "day");
-    // renewal date = 22 feb, reminder date = 15 feb, 17, 20, 21
-    if (reminderDate.isAfter(dayjs())) {
-      // Schedula reminder
-      await sleepUntilReminder(
-        context,
-        `Reminder ${daysBefore} days before`,
-        reminderDate
-      );
+    if (!subscription || subscription.status !== "active") {
+      return res
+        .status(404)
+        .json({ message: "Active subscription not found." });
     }
 
-    await triggerReminder(context, `Reminder ${daysBefore} days before`);
+    const renewalDate = dayjs(subscription.renewalDate);
+
+    if (renewalDate.isBefore(dayjs())) {
+      console.log(
+        `Renewal date has passed for subscription ${subscriptionId}. Stopping reminders.`
+      );
+      return res
+        .status(200)
+        .json({ message: "Renewal date passed. No reminders sent." });
+    }
+
+    for (const daysBefore of REMINDERS) {
+      const reminderDate = renewalDate.subtract(daysBefore, "day");
+
+      if (reminderDate.isAfter(dayjs())) {
+        console.log(
+          `Scheduled reminder ${daysBefore} days before at ${reminderDate}`
+        );
+        // simulate scheduling (or integrate a scheduler)
+        await sleepUntil(reminderDate);
+      }
+
+      await triggerReminder(`Reminder ${daysBefore} days before`);
+    }
+
+    res.status(200).json({ message: "Reminders processed successfully." });
+  } catch (error) {
+    console.error("Error sending reminders:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-});
+};
 
 const fetchSubscription = async (context, subscriptionId) => {
-  return await context.run("get subscription", () => {
+  return await context.run("get subscription", async () => {
     return Subscription.findById(subscriptionId).populate("user", "name email");
   });
 };
