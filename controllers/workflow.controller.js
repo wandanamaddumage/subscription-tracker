@@ -1,56 +1,47 @@
 import dayjs from "dayjs";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { serve } = require("@upstash/workflow/express");
 import Subscription from "../models/subscription.model.js";
 import { sendReminderEmail } from "../utils/send-email.js";
 
 const REMINDERS = [7, 5, 2, 1];
 
-export const sendReminders = async (req, res) => {
-  try {
-    const { subscriptionId } = req.body;
-    const subscription = await Subscription.findById(subscriptionId).populate(
-      "user",
-      "name email"
+export const sendReminders = serve(async (context) => {
+  const { subscriptionId } = context.requestPayload;
+  const subscription = await fetchSubscription(context, subscriptionId);
+
+  if (!subscription || subscription.status !== "active") return;
+
+  const renewalDate = dayjs(subscription.renewalDate);
+
+  if (renewalDate.isBefore(dayjs())) {
+    console.log(
+      `Renewal date has passed for subscription ${subscriptionId}. Stopping workflow.`
     );
-
-    if (!subscription || subscription.status !== "active") {
-      return res
-        .status(404)
-        .json({ message: "Active subscription not found." });
-    }
-
-    const renewalDate = dayjs(subscription.renewalDate);
-
-    if (renewalDate.isBefore(dayjs())) {
-      console.log(
-        `Renewal date has passed for subscription ${subscriptionId}. Stopping reminders.`
-      );
-      return res
-        .status(200)
-        .json({ message: "Renewal date passed. No reminders sent." });
-    }
-
-    for (const daysBefore of REMINDERS) {
-      const reminderDate = renewalDate.subtract(daysBefore, "day");
-
-      if (reminderDate.isAfter(dayjs())) {
-        console.log(
-          `Scheduled reminder ${daysBefore} days before at ${reminderDate}`
-        );
-        // simulate scheduling (or integrate a scheduler)
-        await sleepUntil(reminderDate);
-      }
-
-      await triggerReminder(`${daysBefore} days before Reminder`, subscription);
-    }
-
-    res
-      .status(200)
-      .json({ message: "Reminders processed successfully.", subscription });
-  } catch (error) {
-    console.error("Error sending reminders:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    return;
   }
-};
+
+  for (const daysBefore of REMINDERS) {
+    const reminderDate = renewalDate.subtract(daysBefore, "day");
+
+    if (reminderDate.isAfter(dayjs())) {
+      await sleepUntilReminder(
+        context,
+        `Reminder ${daysBefore} days before`,
+        reminderDate
+      );
+    }
+
+    if (dayjs().isSame(reminderDate, "day")) {
+      await triggerReminder(
+        context,
+        `${daysBefore} days before reminder`,
+        subscription
+      );
+    }
+  }
+});
 
 const fetchSubscription = async (context, subscriptionId) => {
   return await context.run("get subscription", async () => {
@@ -66,7 +57,6 @@ const sleepUntilReminder = async (context, label, date) => {
 const triggerReminder = async (context, label, subscription) => {
   return await context.run(label, async () => {
     console.log(`Triggering ${label} reminder`);
-    // Send email, SMS, push notification ...
 
     await sendReminderEmail({
       to: subscription.user.email,
