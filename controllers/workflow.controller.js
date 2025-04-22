@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import Subscription from "../models/subscription.model.js";
+import { sendReminderEmail } from "../utils/send-email.js";
 
 const REMINDERS = [7, 5, 2, 1];
 
@@ -39,10 +40,12 @@ export const sendReminders = async (req, res) => {
         await sleepUntil(reminderDate);
       }
 
-      await triggerReminder(`Reminder ${daysBefore} days before`);
+      await triggerReminder(`${daysBefore} days before Reminder`, subscription);
     }
 
-    res.status(200).json({ message: "Reminders processed successfully." });
+    res
+      .status(200)
+      .json({ message: "Reminders processed successfully.", subscription });
   } catch (error) {
     console.error("Error sending reminders:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -60,9 +63,15 @@ const sleepUntilReminder = async (context, label, date) => {
   await context.sleepUntil(label, date.toDate());
 };
 
-const triggerReminder = async (context, label) => {
-  return await context.run(label, () => {
+const triggerReminder = async (context, label, subscription) => {
+  return await context.run(label, async () => {
     console.log(`Triggering ${label} reminder`);
     // Send email, SMS, push notification ...
+
+    await sendReminderEmail({
+      to: subscription.user.email,
+      type: label,
+      subscription,
+    });
   });
 };
