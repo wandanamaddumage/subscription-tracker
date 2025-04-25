@@ -14,7 +14,7 @@ export const signUp = async (req, res, next) => {
     const { name, email, password } = req.body;
     console.log("Request Body:", req.body);
 
-    // 🛡 Input validation
+    // Input validation
     if (!name || !email || !password) {
       const error = new Error(
         "All fields (name, email, password) are required"
