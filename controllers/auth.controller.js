@@ -5,12 +5,12 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env.js";
 
 export const signUp = async (req, res, next) => {
-  // Implement sign up logic here
+  // Implement sign up logic here.
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Logic to create a new user
+    // Logic to create a new user.
     const { name, email, password } = req.body;
     console.log("Request Body:", req.body);
 
@@ -23,7 +23,7 @@ export const signUp = async (req, res, next) => {
       throw error;
     }
 
-    // check if a user already exists
+    // check if a user already exists.
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
